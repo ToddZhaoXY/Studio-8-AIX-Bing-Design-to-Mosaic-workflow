@@ -1,0 +1,21 @@
+{
+  "workbenchVersion": "0.3.0",
+  "library": {
+    "path": "MM_design_library/MM-Design-Libraries-compat-00f36936859b.zip",
+    "sha256": "efd1459d1cd955275f75cf832bac3bb3a8fa6a94c540c95a5b280515da756d9b",
+    "bytes": 21928749
+  },
+  "skill": {
+    "name": "mosaic-gen-workflow",
+    "version": "3.6",
+    "sha256": "3a8a240cc14d1fa28304748be62000cefa111bc63598d5db30fcbb9637a9e743",
+    "fileCount": 16,
+    "title": "Mosaic Gen Workflow v3.6"
+  },
+  "historicallyTestedCli": {
+    "codex": "0.163.0-alpha.11",
+    "mosaic": "1.0.1290",
+    "date": "2026-11-12"
+  },
+  "note": "CLI versions are observations, not automatically installed pins. Verify each user environment live."
+}

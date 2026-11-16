@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "imageCardConstructorBundleSha256": "b42327438c6b5c53cf81f81a4dde8d3b46f64857a369dcea0529e2fc01319765",
+  "allowedConstructors": [
+    "Lt",
+    "St",
+    "Dn"
+  ],
+  "notes": "Pure Python translations of audited constructors. New bundles keep unknown expressions until this pin is deliberately reviewed; no package JS is executed."
+}

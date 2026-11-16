@@ -1,0 +1,50 @@
+{
+  "date": "2026-11-16",
+  "version": "0.3.0",
+  "localPlatform": "macOS / Python 3.9.6",
+  "cleanGitClone": true,
+  "workbenchTests": {
+    "passed": 110,
+    "failed": 0
+  },
+  "sourcePackageTests": {
+    "passed": 11,
+    "failed": 0
+  },
+  "offlineHttpSmoke": {
+    "passed": 10,
+    "failed": 0,
+    "remoteWrites": false
+  },
+  "sourceCatalog": {
+    "components": 55,
+    "selections": 464,
+    "imageCardVariants": 49
+  },
+  "skillVersion": "3.6",
+  "liveReadOnlyCheck": {
+    "codexReady": true,
+    "mosaicAuthenticated": true,
+    "mosaicApiReachable": true,
+    "generationStarted": false,
+    "remoteWrites": false
+  },
+  "publicationChecks": {
+    "filesBeforeThisReport": 60,
+    "zipMembersScanned": 271,
+    "credentialPatternHits": 0,
+    "privateStateTracked": false,
+    "missingDocumentationTargets": 0
+  },
+  "limits": [
+    "No colleague-specific account or network acceptance",
+    "No native Windows runtime validation",
+    "No fresh full-library hosted visual acceptance in this publication task",
+    "Model/provider and Mosaic access are per user"
+  ],
+  "githubActions": {
+    "enabled": false,
+    "reason": "Existing OAuth credential lacks workflow scope; SSH transport unavailable",
+    "template": "docs/github-actions-check.yml"
+  }
+}
