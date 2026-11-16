@@ -25,8 +25,8 @@
 ### 2. 下载并检查
 
 ```sh
-git clone https://github.com/ToddZhaoXY/AIXA-Bing-Design-Library.git
-cd AIXA-Bing-Design-Library
+git clone https://github.com/ToddZhaoXY/AIXA-Bing-Design-to-Mosaic-workflow.git
+cd AIXA-Bing-Design-to-Mosaic-workflow
 python3 tools/mosaic-workbench/doctor.py
 ```
 
