@@ -98,5 +98,20 @@ class CodexEngineTests(unittest.TestCase):
         self.assertEqual(result['summary']['notRun'],1)
         self.assertEqual(result['summary']['cancelled'],1)
 
+    def test_prompt_requests_english_reports_without_translating_source(self):
+        request={'targetVersion':'v1.5','workspaceId':'ws-test','folderId':'default',
+                 'itemTimeoutSeconds':300,'maxRepairs':1,'notes':'Preserve the original button label.'}
+        brief={'selection':{'id':'single','componentId':'image-cards','name':'原图卡片',
+                            'variant':'Single image','size':'2x2','width':200,'height':200}}
+        prompt=codex_engine._prompt(request,brief,0,'test-job')
+        self.assertIn('use English for all new summary, refs, differences, icons, validation explanations and finalText',prompt)
+        self.assertIn('Preserve source card text and labels verbatim',prompt)
+        self.assertIn('原图卡片',prompt)
+        self.assertIn('Record report language as en',prompt)
+        self.assertIn('Time budget: 300 seconds',prompt)
+        self.assertIn('at most 1 evidence-based repair(s)',prompt)
+        self.assertIn('same working iteration',prompt)
+        self.assertIn('do not publish',prompt)
+
 
 if __name__=='__main__':unittest.main()

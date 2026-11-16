@@ -74,7 +74,7 @@ def _cli_path():
     if configured:
         candidate = Path(configured)
         if not candidate.is_file() or not os.access(candidate, os.X_OK):
-            raise EngineError('配置的 Mosaic CLI 不存在或不可执行；检查 mosaicBinary / MOSAIC_WORKBENCH_MOSAIC_BIN。', 'needs_setup')
+            raise EngineError('The configured Mosaic CLI is missing or not executable. Check mosaicBinary or MOSAIC_WORKBENCH_MOSAIC_BIN.', 'needs_setup')
         return str(candidate.resolve())
     found = shutil.which("mosaic")
     fallback = Path.home() / ".mosaic/bin/mosaic"
@@ -82,7 +82,7 @@ def _cli_path():
         return str(Path(found).resolve())
     if fallback.is_file():
         return str(fallback)
-    raise EngineError("Mosaic CLI 未安装。请安装官方 CLI 后重试。", "needs_setup")
+    raise EngineError("Mosaic CLI was not found. Install the official CLI and try again.", "needs_setup")
 
 
 def _identifier(value, label):
@@ -130,7 +130,7 @@ def _stop_process(process):
 def _run_cli(arguments, cwd, *, timeout=90, cancel=None, emit=None, log_path=None, stdin=None):
     """Only argv execution. Cancellation terminates this process group only."""
     if cancel is not None and cancel.is_set():
-        raise EngineError("运行已取消。", "cancelled")
+        raise EngineError("Run cancelled.", "cancelled")
     argv = [_cli_path(), "--extension", EXTENSION] + [str(arg) for arg in arguments]
     env = dict(os.environ)
     env.update({"MOSAIC_NO_TUI": "1", "NO_COLOR": "1", "CI": "1"})
@@ -147,7 +147,7 @@ def _run_cli(arguments, cwd, *, timeout=90, cancel=None, emit=None, log_path=Non
     try:
         while selector.get_map():
             if cancel is not None and cancel.is_set():
-                raise EngineError("运行已取消；已保存的远端模板保留在检查点中。", "cancelled")
+                raise EngineError("Run cancelled. Saved remote templates are preserved in the checkpoint.", "cancelled")
             if time.monotonic() - start > timeout:
                 raise EngineError("Mosaic CLI timed out; inspect checkpoint before retrying.", "timeout")
             for key, _ in selector.select(timeout=0.25):
@@ -163,7 +163,7 @@ def _run_cli(arguments, cwd, *, timeout=90, cancel=None, emit=None, log_path=Non
                 if emit and key.data == "stderr":
                     emit({"type": "log", "level": "info", "message": text[-4000:]})
             if emit and time.monotonic() - heartbeat > 15:
-                emit({"type": "progress", "message": "Mosaic AI 正在执行；检查点和运行日志持续保留。", "elapsedSeconds": round(time.monotonic() - start)})
+                emit({"type": "progress", "message": "The legacy Mosaic AI workflow is running. Checkpoints and logs are being saved.", "elapsedSeconds": round(time.monotonic() - start)})
                 heartbeat = time.monotonic()
         code = process.wait(timeout=5)
     except BaseException:
@@ -245,7 +245,7 @@ def _token():
             raise ValueError("No valid Mosaic token")
         return max(candidates, key=lambda item: int(item["expires_on"]))["secret"]
     except (OSError, ValueError, KeyError) as error:
-        raise EngineError("Mosaic 登录需刷新；请在终端运行 mosaic login 后重试。", "needs_auth") from error
+        raise EngineError("Mosaic sign-in needs to be refreshed. Run mosaic login in your terminal, then try again.", "needs_auth") from error
 
 
 def _api(path, *, method="GET", payload=None):
@@ -309,7 +309,7 @@ def _mcp_reads(cwd, calls, *, timeout=120, cancel=None):
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if cancel is not None and cancel.is_set():
-                raise EngineError("运行已取消。", "cancelled")
+                raise EngineError("Run cancelled.", "cancelled")
             while b"\n" in buffer:
                 line, rest = buffer.split(b"\n", 1)
                 buffer[:] = rest
@@ -430,7 +430,7 @@ def _safe_brief_assets(brief, item_dir, cancel=None):
     results = []
     for index, asset in enumerate(brief.get("assets", [])[:24]):
         if cancel is not None and cancel.is_set():
-            raise EngineError("运行已取消。", "cancelled")
+            raise EngineError("Run cancelled.", "cancelled")
         member = asset.get("archivePath", "")
         if not isinstance(member, str) or "/" in member or "\\" in member or ".." in member:
             continue
@@ -478,7 +478,7 @@ def _inline_design_context(brief, assets, refs, reference_contents, skill_files,
                           "requiredBytes": candidate_bytes, "limitBytes": MAX_INLINE_BYTES,
                           "included": coverage, "omittedOptional": omitted,
                           "reason": "The complete source/reference contract cannot fit the verified CLI argument budget. No source was silently truncated and no AI run was launched."})
-                raise EngineError(f"完整设计上下文超出本次CLI容量（{name}）；未截断源码或启动生成。请缩小选择范围或准备更精简、可验证的源规格。", "needs_context_reduction")
+                raise EngineError(f"The full design context exceeds the CLI limit ({name}). No source was truncated and no generation was started. Select a smaller scope or provide a compact, verifiable source specification.", "needs_context_reduction")
             omitted.append({"name": name, "reason": "optional-whole-file exceeds inline budget", "bytes": len(content.encode())})
             return
         sections.append(body)
@@ -564,16 +564,16 @@ def _execution_failure(execution):
     text += "\n" + "\n".join(part for value in _json_values(text) for part in strings(value))
     match = re.search(r'Model\s+["\']?([^"\'\n]{1,120})["\']?\s+is not available', text, re.I)
     if match:
-        return EngineError("Mosaic AI模型不可用：" + redact(match.group(0)) + "。请选择账号当前可用的任务模型；未改全局模型。", "model_unavailable")
+        return EngineError("The Mosaic AI model is unavailable: " + redact(match.group(0)) + ". Choose a model available to this account. Global model settings were not changed.", "model_unavailable")
     critic = re.search(r"Critic session did not produce a critique_search_card result for iteration (\d+)", text, re.I)
     if critic:
-        return EngineError(f"Mosaic独立评审未完成：critic没有返回迭代{critic.group(1)}的 critique_search_card 结果。已保存的模板可继续审阅；notes中的自报分数不作为验收。", "critic_incomplete")
+        return EngineError(f"The independent Mosaic review did not finish: no critique_search_card result was returned for iteration {critic.group(1)}. Saved templates remain available for review; scores in notes are not acceptance evidence.", "critic_incomplete")
     if re.search(r"not authenticated|authentication required|login required|invalid.grant|AADSTS|\b401\b", text, re.I):
-        return EngineError("Mosaic AI登录需要刷新；请检查CLI登录。" + redact(text[-1000:]), "needs_auth")
+        return EngineError("Mosaic AI sign-in needs to be refreshed. Check the CLI login. " + redact(text[-1000:]), "needs_auth")
     if re.search(r"rate.limit|quota.exceeded|\b429\b", text, re.I):
-        return EngineError("Mosaic AI额度或速率限制。" + redact(text[-1000:]), "rate_limited")
+        return EngineError("Mosaic AI quota or rate limit reached. " + redact(text[-1000:]), "rate_limited")
     meaningful = [line.strip() for line in text.splitlines() if re.search(r"error|failed|not available|denied|timed out", line, re.I)]
-    return EngineError("Mosaic AI执行失败：" + redact("\n".join(meaningful[-5:]) or text[-1400:])[:2000])
+    return EngineError("The Mosaic AI workflow failed: " + redact("\n".join(meaningful[-5:]) or text[-1400:])[:2000])
 
 
 def _source_readiness(brief):
@@ -667,7 +667,7 @@ def _component_usage(root, item_dir, jsx, version, cancel):
                      "guideStatus": "read" if guide_keys else "not-read", "refs": refs,
                      "error": error, "basis": "deterministic opening-tag scan of saved authoritative JSX; not a runtime visibility assertion"})
     result = {"usedComponents": list(counts), "componentEvidence": rows,
-              "componentSummary": "实际保存 JSX 使用：" + ("、".join(f"{name}（{count}处）" for name, count in counts.items()) or "未识别到组件标签") + "。组件规范读取与网页正文读取分别记录。"}
+              "componentSummary": "Components in the saved JSX: " + (", ".join(f"{name} ({count})" for name, count in counts.items()) or "No component tags found") + ". Component contract reads and page content reads are recorded separately."}
     save_json(item_dir / "component-usage.json", result)
     return result
 
@@ -752,11 +752,11 @@ def _find_created_templates(root, item_dir, request, job_id, item_index, selecti
     findings, accepted = [], set()
     if len(candidates) > 100:
         save_json(item_dir / "candidate-attribution.json", {"status": "ambiguous", "candidateIds": sorted(candidates), "reason": "Too many concurrent new templates to attribute safely"})
-        raise EngineError("本轮新模板候选过多，已保留候选清单；没有自动移动或重新生成。", "ambiguous_result")
+        raise EngineError("Too many candidate templates were found for this run. The list is preserved; no templates were moved or regenerated.", "ambiguous_result")
     for identifier in sorted(candidates):
         _identifier(identifier, "candidate template ID")
         if cancel is not None and cancel.is_set():
-            raise EngineError("运行已取消。", "cancelled")
+            raise EngineError("Run cancelled.", "cancelled")
         try:
             template = _unwrap(_cli_json(["templates", "get", "--id", identifier], root, timeout=120, cancel=cancel))
             if not isinstance(template, dict):
@@ -793,12 +793,12 @@ def _merge_agent_report(item, verified, item_dir):
         item["agentReportedReferences"] = model_report.get("refs", [])
         item["icons"] = {"status": "unverified", "source": model_report.get("icons", {}).get("source"),
                          "target": model_report.get("icons", {}).get("target"),
-                         "reason": "以上来源和实现由生成agent说明；即使URL/hash与原素材一致，也不能证明宿主显示了正确图标。尚无工作台独立图标视觉验收。"}
+                         "reason": "The source and implementation above were reported by the generating agent. Matching URLs or hashes do not prove the icon rendered correctly. Independent icon visual acceptance is still pending."}
     else:
-        item.setdefault("differences", []).append({"area": "report", "source": "要求提供差异和图标证据", "target": "Agent未输出可机器读取的报告", "reason": "需要人工审阅，不推断视觉验收已通过。", "severity": "major"})
-        item["icons"] = {"status": "unverified", "reason": "没有可独立核验的宿主图标证据。"}
+        item.setdefault("differences", []).append({"area": "report", "source": "A difference report and icon evidence were requested", "target": "The agent did not return a machine-readable report", "reason": "Human review is needed. Visual acceptance has not been established.", "severity": "major"})
+        item["icons"] = {"status": "unverified", "reason": "No independently verifiable host evidence is available for the icon."}
     item["agentReportedScoreNotes"] = re.findall(r"\[Hillclimb[^\]\n]+\]", note_text)
-    item["scoring"] = {"status": "unverified", "reason": "模板notes中的分数或通过声明是agent自述，不是独立critic工具结果。"}
+    item["scoring"] = {"status": "unverified", "reason": "Scores or pass claims in template notes are agent statements, not independent review results."}
     item.update(verified)
     item["status"] = "needs_review" if verified["validation"]["savedFull"] == "pass" and verified["validation"]["preview"] == "pass" else "partial"
     item.pop("error", None)
@@ -843,7 +843,7 @@ def _preview_pass(value, expected_version):
 
 def _verify_template(root, item_dir, template_id, request, before_ids, emit, cancel, *, allow_placement=True):
     if cancel is not None and cancel.is_set():
-        raise EngineError("运行已取消。", "cancelled")
+        raise EngineError("Run cancelled.", "cancelled")
     if template_id in before_ids:
         raise EngineError("AI returned a pre-existing template; it will not be accepted as a fresh reproduction.")
     template = _unwrap(_cli_json(["templates", "get", "--id", template_id], root, timeout=120, cancel=cancel))
@@ -873,11 +873,11 @@ def _verify_template(root, item_dir, template_id, request, before_ids, emit, can
     folder_items = _api(f"/api/v2/workspaces/{request['workspaceId']}/folders/{request['folderId']}/items")
     if template_id not in json.dumps(folder_items):
         if not allow_placement:
-            raise EngineError("只读恢复确认模板尚未在目标目录；已导出内容，不自动移动。", "needs_placement")
+            raise EngineError("Read-only recovery found the template outside the target folder. Content was exported; the template was not moved.", "needs_placement")
         if cancel is not None and cancel.is_set():
-            raise EngineError("运行已取消。", "cancelled")
+            raise EngineError("Run cancelled.", "cancelled")
         emit({"type": "phase", "phase": "placement", "templateId": template_id,
-              "message": "将本次新建模板移动至你选择的精确工作区和目录。"})
+              "message": "Placing this newly created template in the selected workspace and folder."})
         moved = _api(f"/api/v2/templates/{template_id}/location", method="PATCH", payload={
             "workspaceId": request["workspaceId"], "folderId": request["folderId"]})
         save_json(item_dir / "location-write.json", {"request": {"workspaceId": request["workspaceId"], "folderId": request["folderId"]}, "response": moved})
@@ -941,16 +941,16 @@ def _run_legacy_autopilot_job(project_root, job_dir, request, selection_briefs, 
         request["folderId"] = folder_id
         if not (skill / "SKILL.md").is_file():
             raise EngineError("Missing selected skill snapshot")
-        emit({"type": "phase", "phase": "preflight", "message": "检查CLI、登录、版本策略和目标目录。"})
+        emit({"type": "phase", "phase": "preflight", "message": "Checking the CLI, sign-in, version policy, and target folder."})
         environment = get_environment(root)
         save_json(job / "environment.json", environment)
         if not environment["cli"].get("authenticated"):
-            raise EngineError("Mosaic CLI 尚未登录；请运行 mosaic login。", "needs_auth")
+            raise EngineError("Mosaic CLI is not signed in. Run mosaic login.", "needs_auth")
         if environment["cli"].get("apiUrl", "").rstrip("/") != PRODUCTION:
             raise EngineError("This workbench destination is production; selected CLI API host differs. No environment switch was performed.")
         decision = next((entry for entry in environment["versions"] if entry["id"] == version), None)
         if not decision or not decision["authoringAvailable"]:
-            raise EngineError("当前版本不能创作：" + (decision or {}).get("reason", version), "unsupported_version")
+            raise EngineError("This version cannot create templates: " + (decision or {}).get("reason", version), "unsupported_version")
         workspace = next((row for row in environment["workspaces"] if row["id"] == workspace_id), None)
         if not workspace:
             raise EngineError("Workspace is not available to the signed-in user")
@@ -977,7 +977,7 @@ def _run_legacy_autopilot_job(project_root, job_dir, request, selection_briefs, 
         save_json(job / "skill-loaded.json", {"snapshot": str(skill), "files": [{"path": name, "sha256": hashlib.sha256(text.encode()).hexdigest()} for name, text in skill_files]})
         for index, brief in enumerate(selection_briefs):
             if cancel_event.is_set():
-                raise EngineError("运行已取消。", "cancelled")
+                raise EngineError("Run cancelled.", "cancelled")
             selection = brief.get("selection", {})
             selection_id = selection.get("id") or brief.get("id") or f"selection-{index+1}"
             item_dir = job / (f"item-{index+1:02d}-" + hashlib.sha256(selection_id.encode()).hexdigest()[:10])
@@ -985,7 +985,7 @@ def _run_legacy_autopilot_job(project_root, job_dir, request, selection_briefs, 
             item = {"selectionId": selection_id, "status": "running", "refs": [], "differences": [], "icons": {"status": "not-tested"}, "localFiles": []}
             report["items"].append(item)
             save_json(job / "checkpoint.json", report)
-            emit({"type": "phase", "phase": "grounding", "selectionId": selection_id, "message": "读取源设计、skill及官方契约，核对图片来源。"})
+            emit({"type": "phase", "phase": "grounding", "selectionId": selection_id, "message": "Reading the source design, skill, and official contracts; verifying image sources."})
             try:
                 ready, reason = _source_readiness(brief)
                 item["sourceReadiness"] = brief.get("authoringReadiness", {"canAttempt": ready, "reason": reason})
@@ -1014,7 +1014,7 @@ The following complete selected-source contract and actual target references are
 {inline_context}
 """
                 if len(instructions.encode()) > MAX_PROMPT_BYTES:
-                    raise EngineError("完整任务提示超出CLI参数上限；未截断来源或启动生成。", "needs_context_reduction")
+                    raise EngineError("The complete task prompt exceeds the CLI argument limit. No source was truncated and no generation was started.", "needs_context_reduction")
                 (item_dir / "task-prompt.md").write_text(instructions)
                 width, height = selection.get("width"), selection.get("height")
                 size = str(selection.get("size") or "5x4").replace("×", "x").replace("*", "x")
@@ -1023,7 +1023,7 @@ The following complete selected-source contract and actual target references are
                 query = f"Exact reproduction of {selection.get('library','MM')} / {selection.get('name',selection_id)} / {selection.get('variant','')} [workbench {job.name} item {index+1}]"
                 args = _autopilot_args(version, destination, item_dir / "grounding.json", instructions, item_dir / "workflow-checkpoints", query, size, request)
                 save_json(item_dir / "invocation.json", {"command": "mosaic search-card autopilot", "arguments": [value if value != instructions else "[task-prompt.md]" for value in args], "cwd": str(item_dir), "versionScope": "per-run", "globalPreferenceMutations": False})
-                emit({"type": "phase", "phase": "generating", "selectionId": selection_id, "message": f"Mosaic原生AI工作流开始：{version}，目标{destination}。"})
+                emit({"type": "phase", "phase": "generating", "selectionId": selection_id, "message": f"Starting the legacy Mosaic AI workflow: {version}, destination {destination}."})
                 execution = _run_cli(args, item_dir, timeout=1800, cancel=cancel_event, emit=emit, log_path=item_dir / "mosaic.log")
                 values = _json_values(execution["stdout"])
                 save_json(item_dir / "workflow-result.json", {"returncode": execution["returncode"], "values": values})
@@ -1041,10 +1041,10 @@ The following complete selected-source contract and actual target references are
                     raise _execution_failure(execution)
                 if len(ids) != 1:
                     item["createdTemplateIds"] = sorted(ids)
-                    raise EngineError(f"找到{len(ids)}个可归因的新模板，无法唯一确认；已保留候选证据，没有移动或重新生成。", "ambiguous_result" if ids else "failed")
+                    raise EngineError(f"Found {len(ids)} candidate templates for this run; ownership could not be resolved uniquely. Evidence is preserved, and no templates were moved or regenerated.", "ambiguous_result" if ids else "failed")
                 template_id = ids.pop()
                 item.update(templateId=template_id, url=PRODUCTION + "/templates/" + template_id)
-                emit({"type": "phase", "phase": "verification", "selectionId": selection_id, "templateId": template_id, "message": "独立回读模板、版本、目标目录并执行校验。"})
+                emit({"type": "phase", "phase": "verification", "selectionId": selection_id, "templateId": template_id, "message": "Reading back the template, version, and target folder, then running independent validation."})
                 verified = _verify_template(root, item_dir, template_id, request, before_ids, emit, cancel_event)
                 _merge_agent_report(item, verified, item_dir)
                 item["workflowExitCode"] = execution["returncode"]
@@ -1082,7 +1082,7 @@ The following complete selected-source contract and actual target references are
                              "failed": sum(item.get("status") == "failed" for item in report["items"]),
                              "needsSourceEvidence": sum(item.get("status") == "needs_source_evidence" for item in report["items"]),
                              "userAcceptance": "pending", "publication": "not-requested",
-                             "message": report.get("error") or next((item.get("error") or item.get("workflowFailure") for item in report["items"] if item.get("error") or item.get("workflowFailure")), None) or "AI执行与独立服务端校验结果已保留；视觉、图标与交互需要按证据审阅。"}
+                             "message": report.get("error") or next((item.get("error") or item.get("workflowFailure") for item in report["items"] if item.get("error") or item.get("workflowFailure")), None) or "Generation and independent server validation results are saved. Review visual, icon, and interaction evidence separately."}
         save_json(job / "report.json", report)
         RUN_LOCK.release()
     return redact(report)
@@ -1105,12 +1105,12 @@ def _apply_manual_review(job, item):
     observations = review.get("observations", {})
     if "failed" in str(observations.get("iconVisual", "")).lower():
         item["icons"] = {"status": "failed", "source": item.get("agentReportedIcons", {}).get("source"),
-                         "target": "实际Bing画布中图标显示占位样式", "reason": "独立canonical截图观察发现源SVG未正确显示；原素材URL/hash一致不能证明宿主图标还原。",
+                         "target": "The actual Bing canvas showed an icon placeholder", "reason": "An independent canonical screenshot showed that the source SVG did not render correctly. Matching source URLs or hashes do not establish icon fidelity.",
                          "evidence": evidence, "scope": "canonical-only"}
         discovery = review.get("iconDiscovery", {})
         item["icons"]["nativeIconDiscovery"] = discovery
         if discovery.get("nativeExactMatch") == "not-established":
-            item["icons"]["reason"] += f"已查{discovery.get('schemaVersion', '目标版本')} Icon枚举，本次未确认与原稿完全一致的原生图标匹配，因此使用源SVG，但此次宿主显示仍失败。"
+            item["icons"]["reason"] += f"The {discovery.get('schemaVersion', 'target version')} Icon enum was inspected. No exact native match was confirmed, so the source SVG was used; it still failed to render in this host."
         item.setdefault("validation", {})["targetHostVisual"] = "fail"
         item["validation"]["targetHostVisualScope"] = "canonical-only"
     item.setdefault("localFiles", []).append(evidence)
@@ -1158,10 +1158,10 @@ def recover_job(project_root, job_dir, emit=None, cancel_event=None, *, sync_job
                 item["recoveryAttribution"] = attribution
                 if len(identifiers) != 1:
                     item["candidateTemplateIds"] = sorted(identifiers)
-                    raise EngineError("未能唯一确认本轮部分保存的模板；候选已保留，没有移动或重新生成。", "ambiguous_result" if identifiers else "failed")
+                    raise EngineError("The partially saved template could not be identified uniquely. Candidates are preserved; no templates were moved or regenerated.", "ambiguous_result" if identifiers else "failed")
                 identifier = next(iter(identifiers))
                 item.update(templateId=identifier, url=PRODUCTION + "/templates/" + identifier)
-                emit({"type": "phase", "phase": "recovery", "templateId": identifier, "message": "只读恢复已生成模板，导出并独立验证；不重新运行AI。"})
+                emit({"type": "phase", "phase": "recovery", "templateId": identifier, "message": "Recovering the generated template read-only, exporting it, and validating independently without rerunning AI."})
                 verified = _verify_template(root, item_dir, identifier, request, before_ids, emit, cancel, allow_placement=False)
                 _merge_agent_report(item, verified, item_dir)
                 result_path = item_dir / "workflow-result.json"
@@ -1188,7 +1188,7 @@ def recover_job(project_root, job_dir, emit=None, cancel_event=None, *, sync_job
                              "needsReview": sum(item.get("status") == "needs_review" for item in report["items"]),
                              "failed": sum(item.get("status") == "failed" for item in report["items"]),
                              "userAcceptance": "pending", "publication": "not-requested",
-                             "message": f"已找回并保留{saved}个本轮生成模板；原生评审流程未完成，实际视觉差异仍待修复。恢复过程没有重新生成、修改或移动远端模板。"}
+                             "message": f"Recovered and preserved {saved} templates from this run. The native review did not finish and visual differences may remain. Recovery did not regenerate, modify, or move remote templates."}
         save_json(job / "report.json", report)
         save_json(job / "checkpoint.json", report)
         save_json(job / "recovery-report.json", report)

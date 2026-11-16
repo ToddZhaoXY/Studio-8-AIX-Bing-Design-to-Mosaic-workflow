@@ -5,3 +5,8 @@
 @media(min-width:761px) and (max-height:650px){main{padding-top:20px}.intro{margin-bottom:18px}.config-panel{max-height:calc(100dvh - 170px)}}
 @media(max-width:760px){.config-body{max-height:540px;overflow:auto;overscroll-behavior:contain}.config-panel .run-section{border-top:1px solid var(--line)}.queue-main p{max-height:100px;overflow:auto}.job-item{padding:12px 10px;gap:8px}.job-counts{gap:6px 10px}.execution-details>div{grid-template-columns:95px minmax(0,1fr);gap:8px}}
 .execution-excerpt{font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f9fc;padding:12px;border-radius:6px;margin-top:10px}
+/* Keep longer English labels readable at narrow widths. */
+.panel-heading>div,.skill-summary>div,.skill-item>div,.field-pair>.field{min-width:0}.skill-summary strong,.skill-item strong{overflow-wrap:anywhere}.skill-summary .mini-icon,.skill-summary button,.skill-item>.mini-icon,.skill-item>.secondary,.skill-item>.status-pill{flex-shrink:0}.selection-bar,.preview-toolbar,.button-row,.report-item-head{flex-wrap:wrap}.stages span{height:auto;min-height:32px;line-height:1.4;padding:6px 12px}.report-links a{white-space:normal;overflow-wrap:anywhere}.queue-result{max-width:160px}.page-footer{gap:16px;flex-wrap:wrap}.library-panel>.panel-heading{flex-wrap:wrap}.run-summary{gap:12px}.run-summary>span:last-child{flex-shrink:0}
+@media(max-width:760px){.queue-result{max-width:110px}.preview-toolbar .primary{margin-left:0}.job-actions{flex-wrap:wrap}.stages span{padding:6px 8px}}
+/* Keep the action area visible when an English connection notice is shown. */
+@media(min-width:761px){body:has(#global-error:not([hidden])) .config-panel{max-height:calc(100dvh - 300px)}}

@@ -61,8 +61,8 @@ class Workbench:
                 for item in job.get('partialItems', []):
                     if item.get('status') in ('running', 'queued'):
                         item.update(status='interrupted' if item['status']=='running' else 'not_run',
-                                    error='工作台进程中断；保留已保存成果，未自动重试。')
-                job.update(status='interrupted', message='工作台上次运行中断；保留已生成内容，请查看任务文件后重试。', updatedAt=now())
+                                    error='The workbench stopped. Saved drafts are preserved; no automatic retry was started.')
+                job.update(status='interrupted', message='The previous run was interrupted. Generated content is preserved; review the run files before retrying.', updatedAt=now())
                 atomic_json(Path(job['directory']) / 'job.json', job)
         self.save_index()
 
@@ -86,41 +86,41 @@ class Workbench:
     def start(self, request):
         selections = request.get('selectionIds')
         if not isinstance(selections, list) or not 1 <= len(selections) <= 50 or not all(isinstance(s, str) for s in selections):
-            raise ValueError('请选择1到50个组件变体。')
+            raise ValueError('Select between 1 and 50 component variants.')
         selections = list(dict.fromkeys(selections))
         lookup = {i['id']: i for i in self.get_catalog()['items']}
         if any(s not in lookup for s in selections):
-            raise ValueError('所选组件已不在当前 library 中，请刷新后重选。')
+            raise ValueError('A selected component is no longer in this library. Refresh and select it again.')
         if not re.fullmatch(r'v\d+\.\d+', str(request.get('targetVersion', ''))):
-            raise ValueError('请选择有效的 Mosaic 版本。')
+            raise ValueError('Select a valid Mosaic version.')
         for key in ['workspaceId', 'folderId']:
             val = request.get(key, '')
             if not isinstance(val, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,160}', val):
-                raise ValueError('Workspace 与文件夹 ID 只能包含字母、数字、横线和下划线。')
+                raise ValueError('Workspace and folder IDs may contain only letters, numbers, hyphens, and underscores.')
         prefix = request.get('namePrefix', 'Library')
         notes = request.get('notes', '')
         codex_model = request.get('codexModel') or ''
         if not isinstance(codex_model, str) or (codex_model and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,100}', codex_model)):
-            raise ValueError('请输入有效的 Codex 模型 ID。')
+            raise ValueError('Enter a valid Codex model ID.')
         effort = request.get('reasoningEffort','medium')
         timeout = request.get('itemTimeoutSeconds',300)
         repairs = request.get('maxRepairs',1)
         if effort not in ('low','medium','high'):
-            raise ValueError('请选择有效的思考强度。')
+            raise ValueError('Select a valid reasoning effort.')
         if not isinstance(timeout,int) or isinstance(timeout,bool) or not 60 <= timeout <= 900:
-            raise ValueError('单卡时间预算应为60至900秒。')
+            raise ValueError('The per-card time limit must be between 60 and 900 seconds.')
         if not isinstance(repairs,int) or isinstance(repairs,bool) or not 0 <= repairs <= 2:
-            raise ValueError('修复次数应为0至2。')
+            raise ValueError('The repair limit must be between 0 and 2.')
         if not isinstance(prefix, str) or len(prefix) > 80 or not isinstance(notes, str) or len(notes) > 4000:
-            raise ValueError('名称前缀或补充说明过长。')
+            raise ValueError('The name prefix or additional instructions are too long.')
         output = Path(request.get('outputRoot') or ROOT / 'outputs/mosaic-workbench').expanduser()
         output = (ROOT / output).resolve() if not output.is_absolute() else output.resolve()
         if not output.is_relative_to(ROOT) or any(x in ('.git','.agents','.codex','.aws') for x in output.relative_to(ROOT).parts):
-            raise ValueError('本地输出请选择当前项目下的普通目录。')
+            raise ValueError('Choose a regular output folder inside the current project.')
         _, skill_info = self.skills.resolve(request.get('skillId'))
         with self.lock:
             if self.active_id:
-                raise ValueError('已有还原任务正在执行。完成或停止后再启动下一批。')
+                raise ValueError('A batch is already running. Wait for it to finish or stop it before starting another.')
             job_id = datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + secrets.token_hex(3)
             directory = output / job_id
             directory.mkdir(parents=True, exist_ok=False)
@@ -130,11 +130,11 @@ class Workbench:
                        'notes': notes, 'skillId': skill_info['id'], 'outputRoot': str(output),
                        'codexModel': codex_model, 'reasoningEffort': effort,
                        'itemTimeoutSeconds': timeout, 'maxRepairs': repairs,
-                       'libraryRoot': self.get_catalog()['libraryRoot'], 'origin': 'workbench'}
+                       'libraryRoot': self.get_catalog()['libraryRoot'], 'origin': 'workbench', 'reportLanguage': 'en'}
             job = {'id': job_id, 'status': 'queued', 'createdAt': now(), 'updatedAt': now(),
                    'directory': str(directory), 'request': request, 'skill': skill_info,
                    'selectionNames': [lookup[s]['name'] + (' · '+lookup[s].get('variant','') if lookup[s].get('variant') else '') for s in selections],
-                   'events': [], 'message': '准备读取来源与 skill', 'report': None,
+                   'events': [], 'message': 'Preparing source content and workflow skill', 'report': None,
                    'executionMode':'codex-app-server',
                    'partialItems':[{'selectionId':s,'name':lookup[s].get('variant') or lookup[s]['name'],
                                     'status':'queued','elapsedSeconds':0} for s in selections]}
@@ -167,7 +167,7 @@ class Workbench:
                         existing.append(item)
                 if event.get('type') == 'item' and 'message' not in event:
                     result = event.get('item', {})
-                    event['message'] = '组件结果：' + str(result.get('selectionId','')) + ' · ' + str(result.get('status',''))
+                    event['message'] = 'Item result: ' + str(result.get('selectionId','')) + ' · ' + str(result.get('status',''))
                 if 'stage' not in event:
                     event['stage'] = 'source' if event.get('phase') == 'preflight' else 'references'
                 if 'message' in event:
@@ -185,7 +185,7 @@ class Workbench:
             from catalog import extract_selection
             from codex_engine import run_job
             job['status'] = 'running'
-            emit({'stage':'source','message':'读取所选组件，冻结本次来源和 skill。'})
+            emit({'stage':'source','message':'Reading the selected components and snapshotting the source and skill for this run.'})
             briefs = []
             for selection_id in job['request']['selectionIds']:
                 try:
@@ -205,7 +205,7 @@ class Workbench:
             summary = report.get('summary')
             if isinstance(summary, dict):
                 summary = summary.get('message') or summary.get('error')
-            emit({'stage':'report','message':summary or '结果已保存，请查看还原报告。'})
+            emit({'stage':'report','message':summary or 'Results saved. Open the reconstruction report for details.'})
         except Exception as exc:
             job['status'] = 'cancelled' if cancel.is_set() else 'failed'
             message = public_error(exc)
@@ -214,7 +214,7 @@ class Workbench:
                 if item.get('status') in ('queued','running'):
                     item.update(status='cancelled' if cancel.is_set() else 'failed', error=message)
             job['report'] = {'status':job['status'], 'summary':message, 'items':items,
-                             'limitations':['未取得完整交付证据；请查看日志及任务目录中保留的部分结果。']}
+                             'limitations':['Complete delivery evidence is unavailable. Review the logs and partial results in the run folder.']}
             atomic_json(directory / 'report.json', job['report'])
             emit({'stage':'error','message':message})
             print('Run failed:', message, flush=True)
@@ -228,7 +228,7 @@ class Workbench:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'MosaicWorkbench/0.3'
+    server_version = 'MosaicWorkbench/0.4'
 
     @property
     def app(self):
@@ -252,12 +252,12 @@ class Handler(BaseHTTPRequestHandler):
         host = self.headers.get('Host','')
         hostname = host.split(':')[0]
         if hostname not in ('127.0.0.1','localhost'):
-            raise ValueError('只接受本机访问。')
+            raise ValueError('Only localhost requests are allowed.')
         origin = self.headers.get('Origin')
         if origin and origin not in ('http://'+host,):
-            raise ValueError('拒绝跨来源请求。')
+            raise ValueError('Cross-origin requests are not allowed.')
         if mutate and self.headers.get('X-Workbench-Token') != self.app.csrf:
-            raise ValueError('页面会话已过期，请刷新工作台。')
+            raise ValueError('This page session has expired. Refresh the workbench.')
 
     def file(self, root, relative, download=False):
         target = (root / unquote(relative)).resolve()
@@ -286,7 +286,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/bootstrap':
                 catalog = self.app.get_catalog()
                 settings = load_settings(ROOT)
-                return self.json({'version':'0.3.0','csrf':self.app.csrf,'projectRoot':str(ROOT),
+                return self.json({'version':'0.4.0','uiLanguage':'en','csrf':self.app.csrf,'projectRoot':str(ROOT),
                     'defaults':{'workspaceId':settings['workspaceId'],'folderId':settings['folderId'],'outputRoot':str(ROOT/'outputs/mosaic-workbench'),'targetVersion':'v1.5',
                                 'codexModel':'','reasoningEffort':'medium','itemTimeoutSeconds':300,'maxRepairs':1},
                     'skill':self.app.skills.list(),'catalog':{k:v for k,v in catalog.items() if k != 'libraryRoot'},
@@ -297,7 +297,7 @@ class Handler(BaseHTTPRequestHandler):
                 from engine import get_folders
                 workspace_id = query.get('workspaceId',[''])[0]
                 if not re.fullmatch(r'[A-Za-z0-9_-]{1,160}',workspace_id):
-                    raise ValueError('无效的 workspace ID。')
+                    raise ValueError('Invalid workspace ID.')
                 return self.json({'folders':get_folders(ROOT,workspace_id)})
             if path == '/api/skills':
                 return self.json(self.app.skills.list())
@@ -306,7 +306,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json({'jobs':[{k:v for k,v in j.items() if k not in ('events','report')} for j in jobs]})
             if path.startswith('/api/jobs/'):
                 job = self.app.jobs.get(path.removeprefix('/api/jobs/'))
-                return self.json(job,200) if job else self.json({'error':'任务不存在。'},404)
+                return self.json(job,200) if job else self.json({'error':'Run not found.'},404)
             if path.startswith('/library/'):
                 return self.file(Path(self.app.get_catalog()['libraryRoot']),path[len('/library/'):])
             if path.startswith('/runs/'):
@@ -328,7 +328,7 @@ class Handler(BaseHTTPRequestHandler):
             self.check_origin(mutate=True)
             size=int(self.headers.get('Content-Length','0'))
             if size<0 or size>24*1024*1024:
-                raise ValueError('请求过大。')
+                raise ValueError('The request is too large.')
             payload=self.rfile.read(size)
             path=urlsplit(self.path).path
             if path=='/api/skills/import':
@@ -336,7 +336,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json(result)
             request=json.loads(payload or b'{}')
             if not isinstance(request,dict):
-                raise ValueError('请求格式无效。')
+                raise ValueError('Invalid request format.')
             if path=='/api/skills/activate':
                 return self.json(self.app.skills.activate(request.get('id','')))
             if path=='/api/jobs':
@@ -349,7 +349,7 @@ class Handler(BaseHTTPRequestHandler):
                         self.app.jobs[job_id]['status']='cancelling'
                         self.app.save_index()
                     return self.json({'status':'cancelling' if self.app.active_id==job_id else 'inactive'})
-            return self.json({'error':'未知操作。'},404)
+            return self.json({'error':'Unknown operation.'},404)
         except (ValueError,KeyError,FileNotFoundError,zipfile.BadZipFile) as exc:
             self.json({'error':public_error(exc)},400)
         except Exception as exc:

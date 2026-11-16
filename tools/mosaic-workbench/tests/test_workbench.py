@@ -50,17 +50,17 @@ class SkillTests(unittest.TestCase):
         self.assertIn('v3.6',(self.root/'.agents/skills/mosaic-gen-workflow/SKILL.md').read_text())
 
     def test_missing_reference_rejected(self):
-        with self.assertRaisesRegex(ValueError,'引用缺失'):self.store.import_zip(package(broken=True))
+        with self.assertRaisesRegex(ValueError,'reference is missing'):self.store.import_zip(package(broken=True))
 
     def test_traversal_rejected_without_write(self):
         out=io.BytesIO()
         with zipfile.ZipFile(out,'w') as archive:archive.writestr('../escape','bad')
-        with self.assertRaisesRegex(ValueError,'不安全'):self.store.import_zip(out.getvalue())
+        with self.assertRaisesRegex(ValueError,'unsafe path'):self.store.import_zip(out.getvalue())
         self.assertFalse((self.root/'escape').exists())
 
     def test_modified_skill_rejected(self):
         folder,info=self.store.resolve();(folder/'references/rules.md').write_text('Changed')
-        with self.assertRaisesRegex(ValueError,'已变化'):self.store.resolve(info['id'])
+        with self.assertRaisesRegex(ValueError,'files have changed'):self.store.resolve(info['id'])
 
     def test_unknown_version_rejected(self):
         with self.assertRaises(ValueError):self.store.activate('../../other')
@@ -73,11 +73,11 @@ class RunGuardTests(unittest.TestCase):
         return app
 
     def test_no_selection_is_rejected(self):
-        with self.assertRaisesRegex(ValueError,'请选择'):self.make_app().start({'selectionIds':[]})
+        with self.assertRaisesRegex(ValueError,'Select between'):self.make_app().start({'selectionIds':[]})
 
     def test_unknown_selection_is_rejected(self):
         app=self.make_app();app.get_catalog=lambda:app.catalog
-        with self.assertRaisesRegex(ValueError,'不在当前'):app.start({'selectionIds':['unknown']})
+        with self.assertRaisesRegex(ValueError,'no longer in this library'):app.start({'selectionIds':['unknown']})
 
     def test_workspace_shell_text_is_rejected(self):
         app=self.make_app();app.get_catalog=lambda:app.catalog
@@ -85,7 +85,7 @@ class RunGuardTests(unittest.TestCase):
 
     def test_outside_project_output_is_rejected(self):
         app=self.make_app();app.get_catalog=lambda:app.catalog
-        with self.assertRaisesRegex(ValueError,'当前项目'):app.start({'selectionIds':['one'],'targetVersion':'v1.5','workspaceId':'ws-test','folderId':'default','outputRoot':'/tmp/outside'})
+        with self.assertRaisesRegex(ValueError,'inside the current project'):app.start({'selectionIds':['one'],'targetVersion':'v1.5','workspaceId':'ws-test','folderId':'default','outputRoot':'/tmp/outside'})
 
     def test_restart_retains_drafts_and_closes_stale_item_states(self):
         with tempfile.TemporaryDirectory() as tmp:

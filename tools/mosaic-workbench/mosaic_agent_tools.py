@@ -135,9 +135,9 @@ class MosaicAgentTools:
                                     ["jsx", "schema", "data"])},
             {"name": "validate_preview", "description": "Validate/read back this item's saved exact iteration, preview SDL and optionally capture the actual Bing host. Returns screenshot _imagePath for the caller to display as an image. Capture is not visual acceptance.",
              "inputSchema": _schema({"capture": {"type": "boolean"}, **paging})},
-            {"name": "save_report", "description": "Save a local structured report. Use these exact UI field names: summary (Chinese string); refs [{title,url?,usedFor}]; differences [{area,source,target,reason}]; icons {status,source,target,reason}; validation {targetHostVisual,images,icons,responsive,pointer,keyboard}. State pass/fail/not-tested only from actual evidence; explain unsupported/approximate behavior. The report reviewer is Codex: do not label model observations as human or manual acceptance. Additional report fields are allowed. Agent visual/interaction claims remain separate from broker validation. Does not publish or modify remote notes.",
+            {"name": "save_report", "description": "Save a local structured report in English. Use these exact UI field names: summary (English string); refs [{title,url?,usedFor}]; differences [{area,source,target,reason}]; icons {status,source,target,reason}; validation {targetHostVisual,images,icons,responsive,pointer,keyboard}. Write all explanations in English, but preserve quoted source card text and labels verbatim. State pass/fail/not-tested only from actual evidence; explain unsupported/approximate behavior. The report reviewer is Codex: do not label model observations as human or manual acceptance. Additional report fields are allowed. Agent visual/interaction claims remain separate from broker validation. Does not publish or modify remote notes.",
              "inputSchema": _schema({"report": {"type": "object", "properties": {
-                 "summary": {"type": "string", "description": "Chinese summary of actual outcome and remaining limitations."},
+                 "summary": {"type": "string", "description": "Concise English summary of the actual outcome and remaining limitations."},
                  "refs": {"type": "array", "items": {"type": "object", "properties": {
                      "title": {"type": "string"}, "url": {"type": "string"}, "usedFor": {"type": "string"}}}},
                  "differences": {"type": "array", "items": {"type": "object", "properties": {
@@ -153,9 +153,9 @@ class MosaicAgentTools:
 
     def _check(self):
         if self.is_set():
-            raise engine.EngineError("运行已取消；本任务已保存的草稿保留。", "cancelled")
+            raise engine.EngineError("The run was cancelled. Drafts already saved by this task are preserved.", "cancelled")
         if time.monotonic() >= self.deadline:
-            raise engine.EngineError("单卡时间预算已耗尽；本任务草稿和证据保留。", "timeout")
+            raise engine.EngineError("The per-card time budget is exhausted. This task's drafts and evidence are preserved.", "timeout")
 
     def is_set(self):
         """Cancellation proxy for CLI children; never sets the global job event."""
@@ -324,7 +324,7 @@ class MosaicAgentTools:
         profile = engine._unwrap(self._cli(["extensions", "current"]))
         engine.save_json(self.item_dir / "profile-readback.json", profile)
         if _version(profile.get("schemaVersion")) != _version(self.version):
-            raise engine.EngineError(f"当前非AI新建原语使用profile {profile.get('schemaVersion')}，目标为{self.version}。未修改全局版本，也未创建模板。", "unsupported_version_pin")
+            raise engine.EngineError(f"The direct creation API uses profile {profile.get('schemaVersion')}, but the target is {self.version}. The global version was not changed and no template was created.", "unsupported_version_pin")
         return profile
 
     def _grid(self, requested=None):
@@ -684,7 +684,7 @@ class MosaicAgentTools:
         report = args.get("report")
         if not isinstance(report, dict) or len(_json(report).encode()) > MAX_FIELD:
             raise engine.EngineError("Report must be a bounded JSON object")
-        report = {**report, "reviewer": "Codex", "reviewType": "model-review", "selectionId": self.state["selectionId"],
+        report = {**report, "language": "en", "reviewer": "Codex", "reviewType": "model-review", "selectionId": self.state["selectionId"],
                   "templateId": self.state.get("templateId"), "iteration": self.state.get("iteration")}
         engine.save_json(self.item_dir / "agent-report.json", report)
         self.state["report"] = engine.redact(report)

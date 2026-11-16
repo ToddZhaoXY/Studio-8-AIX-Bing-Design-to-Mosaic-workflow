@@ -235,6 +235,7 @@ class AgentToolsTests(unittest.TestCase):
         self.tools.call("save_report", {"report": {"validation": {"targetHostVisual": "pass"}, "differences": []}})
         commands_before = len(self.fake.commands)
         result = self.tools.result()
+        self.assertEqual(result["report"]["language"], "en")
         self.assertEqual(result["validation"]["targetHostVisual"], "not-tested")
         self.assertEqual(result["agentReportedValidation"]["targetHostVisual"], "pass")
         self.assertEqual(result["saveCount"], 1)
@@ -276,7 +277,7 @@ class AgentToolsTests(unittest.TestCase):
             self.assertEqual(summary["images"][0]["mimeType"], "image/png")
             self.assertEqual(summary["templateId"], "new-owned-template")
             self.assertNotIn("content", summary)
-        self.tools.call("save_report", {"report": {"summary": "Codex已查看宿主截图", "reviewer": "human"}})
+        self.tools.call("save_report", {"report": {"summary": "Codex inspected the host screenshot.", "reviewer": "human"}})
         self.assertEqual(self.tools.result()["report"]["reviewer"], "Codex")
         self.assertEqual(self.tools.result()["reportReviewer"], "Codex")
 

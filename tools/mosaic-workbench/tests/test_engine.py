@@ -228,7 +228,7 @@ class EngineTests(unittest.TestCase):
             engine._apply_manual_review(root, item)
             self.assertEqual(sum(row['area'] == 'moreAction' for row in item['differences']), 1)
             self.assertEqual(item['icons']['status'], 'failed')
-            self.assertIn('已查v1.5 Icon枚举', item['icons']['reason'])
+            self.assertIn('The v1.5 Icon enum was inspected', item['icons']['reason'])
             self.assertEqual(item['agentReportedIcons']['status'], 'exact')
 
 

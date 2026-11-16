@@ -76,7 +76,7 @@ def main():
     except urllib.error.HTTPError as error:
         print(error.read().decode(), file=__import__('sys').stderr)
     except (OSError, ValueError) as error:
-        print('工作台请求失败：' + str(error), file=__import__('sys').stderr)
+        print('Workbench request failed: ' + str(error), file=__import__('sys').stderr)
     return 1
 
 

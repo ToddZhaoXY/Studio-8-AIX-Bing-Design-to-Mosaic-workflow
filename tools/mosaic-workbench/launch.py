@@ -49,14 +49,14 @@ def main(argv=None):
             if inspect(url) == str(ROOT):
                 break
             if process.poll() is not None:
-                print('启动失败，请查看：' + str(APP / 'state/server.log'), file=sys.stderr)
+                print('Startup failed. See: ' + str(APP / 'state/server.log'), file=sys.stderr)
                 return 1
             time.sleep(.5)
         else:
-            print('启动尚未完成，请查看：' + str(APP / 'state/server.log'), file=sys.stderr)
+            print('Startup is not complete. See: ' + str(APP / 'state/server.log'), file=sys.stderr)
             return 1
         (APP / 'state/server-process.json').write_text(json.dumps({'pid': process.pid, 'port': args.port, 'projectRoot': str(ROOT)}))
-    print('Mosaic 工作台：' + url)
+    print('Mosaic Workbench: ' + url)
     if not args.no_browser:
         webbrowser.open(url)
     return 0

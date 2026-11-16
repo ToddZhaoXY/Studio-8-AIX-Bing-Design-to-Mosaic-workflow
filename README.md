@@ -4,6 +4,10 @@
 
 这是运行在每位使用者电脑上的工具。GitHub 用于分发和协作；无需部署网站，也不需要共享作者的账号。当前实现不是已打包的 Codex plugin，后续可在现有执行接口外增加 plugin 入口。
 
+**English UI:** Version 0.4 uses English throughout the workbench and for new reports. [English quick start](docs/quick-start.en.md).
+
+![English workbench](docs/images/english-workbench.jpg)
+
 ## 同事拿到仓库后怎么用
 
 ### 1. 准备自己的运行环境
@@ -48,7 +52,7 @@ python3 tools/mosaic-workbench/doctor.py --live
 ./start.sh
 ```
 
-macOS 也可以双击 **启动Mosaic工作台.command**。默认地址为 <http://127.0.0.1:8770>。不想自动打开浏览器时：
+macOS 也可以双击 **Start Mosaic Workbench.command**（原中文启动器仍可用）。默认地址为 <http://127.0.0.1:8770>。不想自动打开浏览器时：
 
 ```sh
 ./start.sh --no-browser
@@ -65,8 +69,8 @@ python3 tools/mosaic-workbench/server.py --port 8770
 1. 搜索或筛选组件，点击原始库预览，再多选。每批最多50项，可一次选择 Image cards 的全部49项。
 2. 等待 Codex、Mosaic 连接检查。**首次必须选择你自己的 workspace 和已有文件夹**；也支持手动输入 ID。
 3. 选择可用 SDL 版本、名称前缀；可设 Codex 模型、思考强度、每卡时限、最多修复次数，以及补充说明。
-4. 点击“让 Codex 开始还原”。默认每卡5分钟、最多1次修复；失败或超时保留草稿并继续下一项。
-5. 在任务记录查看模板链接、使用的组件/参考、图标选择和差异。详细验证、截图和执行文件可展开查看。
+4. 点击 **Build with Codex**。默认每卡5分钟、最多1次修复；失败或超时保留草稿并继续下一项。
+5. 在 **History** 中查看模板链接、使用的组件/参考、图标选择和差异。详细验证、截图和执行文件可展开查看。
 
 输入示例：筛选 **Image cards** → 全选 → 前缀 `MM_image_cards` → 选择团队工作区 → 运行。大量任务会持续较久；关闭网页不会停止后台服务，关机、休眠、断网或退出服务会影响执行。需要停止时使用页面的“停止任务”。重启不会擅自重建中断模板，避免重复生成。
 
@@ -94,7 +98,7 @@ CLI 路径可以是绝对路径或相对此仓库的文件路径；不填写时�
 ## Skill 与版本
 
 - 随仓库提供完整的 [Mosaic Gen Workflow v3.6](.agents/skills/mosaic-gen-workflow/SKILL.md)。Codex 在本项目可读取它，工作台首次启动会建立独立副本。
-- UI **Skill → 导入 ZIP → 启用** 可独立更新工作流；运行中任务继续使用启动时冻结的版本。
+- UI **Skill → Import ZIP → Activate** 可独立更新工作流；运行中任务继续使用启动时冻结的版本。
 - [官方更新入口](https://vibehub.microsoft.com/app/anthonyleung-fp-t-a/)可能需要公司访问权限。
 - 当前直接写入接口只允许所选 Mosaic profile 的实际 SDL pin；项目新建默认 v1.5。下拉菜单会禁用未验证或后台不支持的版本，**不会为了单次任务切换全局 profile**。
 - Skill 的静态样例中若有作者路径或旧接口，以你本机 CLI 路径和实时版本契约为准。

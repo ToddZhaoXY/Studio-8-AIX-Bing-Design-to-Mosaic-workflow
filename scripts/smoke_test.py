@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
+import re
 import selectors
 import shutil
 import signal
@@ -20,6 +22,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 from urllib.parse import quote
 
@@ -36,6 +39,7 @@ server.SkillStore = lambda _: RealSkillStore(scratch)
 def forbidden_environment(*args, **kwargs):
     raise AssertionError("Smoke test must not inspect live environment")
 server.Workbench.get_environment = forbidden_environment
+server.Workbench.execute = forbidden_environment
 app = server.Workbench()
 app.get_catalog()
 httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -48,13 +52,23 @@ finally:
 '''
 
 
-def _request(base, path, headers=None):
-    request = urllib.request.Request(base + path, headers=headers or {})
+def _request(base, path, headers=None, *, method="GET", data=None):
+    request = urllib.request.Request(base + path, headers=headers or {}, method=method, data=data)
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
             return response.status, response.read(), response.headers
     except urllib.error.HTTPError as error:
         return error.code, error.read(), error.headers
+
+
+def _english_error(body, *concepts):
+    try:
+        value = json.loads(body).get("error", "")
+    except (ValueError, AttributeError):
+        return False
+    return (isinstance(value, str) and bool(re.search(r"[A-Za-z]", value))
+            and not re.search(r"[\u3400-\u9fff]", value)
+            and all(concept.lower() in value.lower() for concept in concepts))
 
 
 def _stop_owned(process):
@@ -75,7 +89,7 @@ def run_smoke(project_root=None):
     report = {"mode": "offline-local-http", "projectRoot": str(root), "checks": [], "liveEnvironmentRequested": False,
               "generationStarted": False, "remoteWrites": False, "processCleanup": "not-started"}
     if os.name != "posix":
-        return {**report, "ok": False, "error": "原生Windows请在WSL运行smoke test。", "exitCode": 1}
+        return {**report, "ok": False, "error": "Run this smoke test inside WSL on Windows.", "exitCode": 1}
     process = None
     try:
         with tempfile.TemporaryDirectory(prefix="mosaic-local-smoke-") as temporary:
@@ -114,9 +128,12 @@ def run_smoke(project_root=None):
                     raise AssertionError(name)
             status, body, _ = _request(base, "/")
             check("index", status == 200 and b"<html" in body.lower(), httpStatus=status)
+            check("english-document-language", bool(re.search(rb"<html\b[^>]*\blang\s*=\s*['\"]en['\"]", body, re.I)))
             status, body, _ = _request(base, "/api/bootstrap")
             check("bootstrap", status == 200, httpStatus=status)
             bootstrap = json.loads(body)
+            check("english-bootstrap-language", bootstrap.get("uiLanguage") == "en" and bootstrap.get("version") == "0.4.0",
+                  uiLanguage=bootstrap.get("uiLanguage"), version=bootstrap.get("version"))
             items = bootstrap["catalog"]["items"]
             components = len({(i["library"], i["componentId"]) for i in items})
             image_cards = sum(i["library"] == "mm-image" and i["componentId"] == "image-cards" for i in items)
@@ -124,6 +141,19 @@ def run_smoke(project_root=None):
             status, body, _ = _request(base, "/api/skills")
             skills = json.loads(body)
             check("skill", status == 200 and bool(skills.get("activeId")) and bool(skills.get("versions")), httpStatus=status)
+            mutation_headers = {"Content-Type": "application/json", "Origin": base, "X-Workbench-Token": bootstrap["csrf"]}
+            status, body, _ = _request(base, "/api/jobs", mutation_headers, method="POST", data=b'{"selectionIds":[]}')
+            check("empty-selection-rejected-in-english", status == 400 and _english_error(body, "select", "variant"), httpStatus=status)
+            invalid_zip = io.BytesIO()
+            with zipfile.ZipFile(invalid_zip, "w") as archive:
+                archive.writestr("README.txt", "Safe test archive: deliberately contains no skill.")
+            status, body, _ = _request(base, "/api/skills/import", {**mutation_headers, "Content-Type": "application/zip", "X-Filename": "invalid-skill.zip"},
+                                       method="POST", data=invalid_zip.getvalue())
+            check("invalid-skill-rejected-in-english", status == 400 and _english_error(body, "zip", "skill"), httpStatus=status)
+            status, body, _ = _request(base, "/api/skills")
+            after_skills = json.loads(body)
+            check("skill-import-did-not-activate", status == 200 and after_skills.get("activeId") == skills.get("activeId")
+                  and {s["id"] for s in after_skills["versions"]} == {s["id"] for s in skills["versions"]})
             first = next(i for i in items if i["id"] == "mm-image/image-cards/2x2/single-image")
             status, body, _ = _request(base, "/library/" + first["previewPath"].split("#", 1)[0])
             check("library-page", status == 200 and b"<html" in body.lower(), httpStatus=status)
@@ -134,10 +164,12 @@ def run_smoke(project_root=None):
             status, body, headers = _request(base, "/library/" + quote(asset, safe="/"))
             check("source-asset", status == 200 and hashlib.sha256(body).hexdigest() == manifest["files"][asset],
                   httpStatus=status, contentType=headers.get("Content-Type"), bytes=len(body))
-            status, _, _ = _request(base, "/api/bootstrap", {"Origin": "https://different-origin.invalid"})
-            check("cross-origin-rejected", 400 <= status < 500, httpStatus=status)
-            status, _, _ = _request(base, "/api/bootstrap", {"Host": "different-host.invalid"})
-            check("non-loopback-host-rejected", 400 <= status < 500, httpStatus=status)
+            status, body, _ = _request(base, "/api/bootstrap", {"Origin": "https://different-origin.invalid"})
+            check("cross-origin-rejected", 400 <= status < 500 and _english_error(body, "cross-origin"), httpStatus=status)
+            status, body, _ = _request(base, "/api/bootstrap", {"Host": "different-host.invalid"})
+            check("non-loopback-host-rejected", 400 <= status < 500 and _english_error(body, "localhost"), httpStatus=status)
+            status, body, _ = _request(base, "/api/jobs", {"Content-Type": "application/json", "Origin": base}, method="POST", data=b"{}")
+            check("missing-csrf-rejected-in-english", status == 400 and _english_error(body, "session", "refresh"), httpStatus=status)
             status, body, _ = _request(base, "/api/jobs")
             check("no-jobs-created", status == 200 and json.loads(body).get("jobs") == [], httpStatus=status)
             report.update(ok=True, exitCode=0)
@@ -164,7 +196,7 @@ def main(argv=None):
     else:
         for check in report["checks"]:
             print(f"[{check['status'].upper()}] {check['name']}")
-        print("离线HTTP检查通过，独立进程已清理。" if report["ok"] else "检查失败：" + report.get("error", "unknown"))
+        print("Offline HTTP checks passed; the owned process has been stopped." if report["ok"] else "Check failed: " + report.get("error", "unknown"))
     return report["exitCode"]
 
 

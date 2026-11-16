@@ -62,7 +62,7 @@ class CodexPortabilityTests(unittest.TestCase):
             with self.assertRaises(runtime.CodexRuntimeError) as caught:
                 runtime.resolve_codex_binary()
         self.assertEqual(caught.exception.status, "needs_setup")
-        self.assertIn("未改用其他CLI", str(caught.exception))
+        self.assertIn("no other CLI was selected", str(caught.exception))
         search.assert_not_called()
 
     def test_explicit_non_executable_is_an_error(self):
