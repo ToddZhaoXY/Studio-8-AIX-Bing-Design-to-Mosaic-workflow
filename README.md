@@ -1,20 +1,20 @@
-# AIXA · Bing Design Library → Mosaic
+# Studio 8 AIX · Bing Design Components to Mosaic Workflow
 
-带操作界面的本地还原工作台：从 MM Image、AIGC、Video 设计库多选样例，让 **Codex 按版本化 skill，查询 Mosaic 原生组件和规则，使用 Mosaic CLI 创建模板，检查截图并报告差异**。
+A local workbench for recreating components from the Bing Multimedia design library as Mosaic templates. Select examples from MM Image, AIGC, and Video, then let **Codex follow a versioned workflow skill, inspect native Mosaic components and rules, build templates through Mosaic CLI, review screenshots, and report differences**.
 
-这是运行在每位使用者电脑上的工具。GitHub 用于分发和协作；无需部署网站，也不需要共享作者的账号。当前实现不是已打包的 Codex plugin，后续可在现有执行接口外增加 plugin 入口。
+The workbench runs on each user's own computer. GitHub provides distribution and collaboration; no website deployment or shared author account is required. The current implementation is a local tool, with a possible Codex plugin entry point planned for the future.
 
-**English UI:** Version 0.4 uses English throughout the workbench and for new reports. [English quick start](docs/quick-start.en.md).
+**English UI:** Version 0.4 uses English throughout the workbench and for new reports. Source content, user inputs, and historical reports retain their original language. See the [English quick start](docs/quick-start.en.md).
 
 ![English workbench](docs/images/english-workbench.jpg)
 
-## 同事拿到仓库后怎么用
+## Getting started
 
-### 1. 准备自己的运行环境
+### 1. Prepare your environment
 
-- **macOS 或 Linux，Python 3.9+**。Windows 请在 WSL2 内运行完整工作流；原生 Windows 进程管理尚不支持。
-- **Codex CLI**：按[官方安装说明](https://developers.openai.com/codex/cli/)安装。可用 `npm install -g @openai/codex`，然后在终端运行 `codex` 完成自己的登录或配置自己的 provider。桌面版附带的 CLI 也可使用。
-- **Mosaic CLI**：需可访问 Microsoft Mosaic 的账号、网络和工作区。安装命令来自随附 skill 的[官方配置指引](.agents/skills/mosaic-gen-workflow/references/api-and-iteration-workflow.md)：
+- **macOS or Linux with Python 3.9+.** On Windows, run the full workflow inside WSL2. Native Windows process management is not supported yet.
+- **Codex CLI:** Follow the [official installation guide](https://developers.openai.com/codex/cli/). You can install it with `npm install -g @openai/codex`, then run `codex` in a terminal to sign in with your own account or configure your own provider. The CLI bundled with the Codex desktop app can also be used.
+- **Mosaic CLI:** You need an account, network connection, and workspace with access to Microsoft Mosaic. The installation command below comes from the bundled skill's [setup reference](.agents/skills/mosaic-gen-workflow/references/api-and-iteration-workflow.md):
 
   ```sh
   curl -fsSL "https://afd-mosaic-f6e8eycvfaeffkam.b02.azurefd.net/api/cli/install" | bash
@@ -22,110 +22,112 @@
   mosaic status
   ```
 
-  如果当前终端还找不到 `mosaic`，重新打开终端，或使用 `~/.mosaic/bin/mosaic`。Mosaic 可能要求公司网络/VPN。仅有 GitHub 仓库访问权不等于拥有 Mosaic 使用权限。
+  If your terminal cannot find `mosaic`, open a new terminal or use `~/.mosaic/bin/mosaic`. Mosaic may require a corporate network or VPN. Access to this GitHub repository does not grant access to Mosaic.
 
-本工具不安装或修改你的 provider、模型和全局 MCP 设置，不包含账号凭据。生成任务使用你本机配置的 Codex，因此访问权限和用量由你自己的配置决定。
+The workbench does not install or change your provider, model, or global MCP settings, and it includes no account credentials. Generation uses your locally configured Codex environment, so access and usage depend on your own configuration.
 
-### 2. 下载并检查
+### 2. Download and check the project
 
 ```sh
-git clone https://github.com/ToddZhaoXY/AIXA-Bing-Design-to-Mosaic-workflow.git
-cd AIXA-Bing-Design-to-Mosaic-workflow
+git clone https://github.com/ToddZhaoXY/Studio-8-AIX-Bing-Design-to-Mosaic-workflow.git
+cd Studio-8-AIX-Bing-Design-to-Mosaic-workflow
 python3 tools/mosaic-workbench/doctor.py
 ```
 
-也可以在 GitHub 上 **Code → Download ZIP**，完整解压后进入目录。仓库已附带约 21 MB 的已验证 Library ZIP 和完整 `mosaic-gen-workflow v3.6`，不需要向作者索要素材；首次启动会建立本地缓存。
+You can also choose **Code → Download ZIP** on GitHub, extract the complete archive, and open the extracted directory. The repository includes a verified Library ZIP of approximately 21 MB and the complete `mosaic-gen-workflow v3.6` skill. The workbench creates a local cache on first launch.
 
-`doctor.py` 默认离线检查 Python、源包、skill、55个组件/464个样例的目录和 CLI 路径，不登录、不调用模型、不创建模板。CLI 尚未安装时仍可浏览源库；开始还原前需要两种 CLI 均可用。
+By default, `doctor.py` runs offline checks for Python, the source package, the skill, the catalog of 55 components and 464 examples, and CLI paths. It does not sign in, call a model, or create templates. You can browse the source library before installing the CLIs, but both CLIs must be available to start a build.
 
-如需检查真实连接，可显式运行：
+To check live connections explicitly, run:
 
 ```sh
 python3 tools/mosaic-workbench/doctor.py --live
 ```
 
-真实连接检查会读取自己的账号环境；使用自定义 provider 且没有 OAuth 元数据时，可能运行一次小型只读模型探针。不会创建 Mosaic 模板。Codex 运行层使用 App Server 的实验性动态工具，CLI 需支持该能力；不把“二进制存在”当成“执行链路已验证”。
+The live check reads your account environment. With a custom provider and no OAuth metadata, it may run a small read-only model probe. It does not create Mosaic templates. The execution layer uses experimental dynamic tools in Codex App Server, so your CLI must support that capability. Finding a CLI binary alone does not verify the full execution path.
 
-### 3. 打开工作台
+### 3. Open the workbench
 
 ```sh
 ./start.sh
 ```
 
-macOS 也可以双击 **Start Mosaic Workbench.command**（原中文启动器仍可用）。默认地址为 <http://127.0.0.1:8770>。不想自动打开浏览器时：
+On macOS, you can also double-click **Start Mosaic Workbench.command**. The legacy launcher remains supported. The default URL is <http://127.0.0.1:8770>. To start without opening a browser automatically:
 
 ```sh
 ./start.sh --no-browser
 ```
 
-端口被其他 checkout 占用时，使用 `./start.sh --port 8771`。启动器不会接管其他项目的服务。需要前台运行并用 Ctrl+C 停止时：
+If another checkout is using the port, run `./start.sh --port 8771`. The launcher will not take over a service belonging to another project. To run in the foreground and stop with Ctrl+C:
 
 ```sh
 python3 tools/mosaic-workbench/server.py --port 8770
 ```
 
-### 4. 选择自己的输出位置并运行
+### 4. Choose an output destination and build
 
-1. 搜索或筛选组件，点击原始库预览，再多选。每批最多50项，可一次选择 Image cards 的全部49项。
-2. 等待 Codex、Mosaic 连接检查。**首次必须选择你自己的 workspace 和已有文件夹**；也支持手动输入 ID。
-3. 选择可用 SDL 版本、名称前缀；可设 Codex 模型、思考强度、每卡时限、最多修复次数，以及补充说明。
-4. 点击 **Build with Codex**。默认每卡5分钟、最多1次修复；失败或超时保留草稿并继续下一项。
-5. 在 **History** 中查看模板链接、使用的组件/参考、图标选择和差异。详细验证、截图和执行文件可展开查看。
+1. Search or filter components, preview the originals, and select the examples you want. Each batch supports up to 50 entries, enough for all 49 Image cards.
+2. Wait for the Codex and Mosaic connection checks. **On first use, select your own workspace and an existing folder.** You can also enter their IDs manually.
+3. Choose an available SDL version and a template name prefix. Optionally set the Codex model, reasoning effort, time limit per card, repair limit, and additional instructions.
+4. Click **Build with Codex**. The defaults are 5 minutes per card and at most one repair. If an item fails or times out, saved drafts are kept and the batch continues with the next item.
+5. Open **View report** or **History** to inspect template links, components and references used, icon choices, and differences. Expand the details for validation evidence, screenshots, and execution files.
 
-输入示例：筛选 **Image cards** → 全选 → 前缀 `MM_image_cards` → 选择团队工作区 → 运行。大量任务会持续较久；关闭网页不会停止后台服务，关机、休眠、断网或退出服务会影响执行。需要停止时使用页面的“停止任务”。重启不会擅自重建中断模板，避免重复生成。
+For example: filter **Image cards** → select all → set the prefix to `MM_image_cards` → choose your team's workspace and folder → start the build.
 
-## 个人配置（可选）
+Large batches can take a while. Closing the page does not stop the background service, but shutting down, sleeping, losing network access, or exiting the service can interrupt execution. Use **Stop batch** to stop a run. Restarting the workbench does not automatically rebuild interrupted templates, which helps avoid duplicates.
+
+## Optional personal configuration
 
 ```sh
 cp workbench.example.json workbench.local.json
 ```
 
-`workbench.local.json` 已加入 `.gitignore`。可指定 CLI 路径、默认工作区/文件夹、兼容源包或图片托管地址；不需要填写全部字段，**不要填密码或 token**。
+`workbench.local.json` is ignored by Git. Use it to set CLI paths, a default workspace or folder, a compatible source package, or an image hosting URL. All fields are optional. **Do not put passwords or tokens in this file.**
 
-| JSON 字段 | 环境变量覆盖 | 默认行为 |
+| JSON field | Environment variable override | Default behavior |
 | --- | --- | --- |
-| `codexBinary` | `MOSAIC_WORKBENCH_CODEX_BIN` | PATH 查找，再检查已知 macOS 桌面 CLI 路径 |
-| `mosaicBinary` | `MOSAIC_WORKBENCH_MOSAIC_BIN` | PATH 查找，再检查 `~/.mosaic/bin/mosaic` |
-| `workspaceId` | `MOSAIC_WORKSPACE_ID` | 空，由使用者在 UI 选择 |
-| `folderId` | `MOSAIC_FOLDER_ID` | `default`，仍以实际可访问文件夹为准 |
-| `libraryZip` | `MOSAIC_LIBRARY_ZIP` | 仓库附带的兼容 ZIP |
-| `assetBaseUrl` | `MOSAIC_ASSET_BASE_URL` | 已有公开 Library 资源目录 |
+| `codexBinary` | `MOSAIC_WORKBENCH_CODEX_BIN` | Search `PATH`, then known macOS desktop CLI locations |
+| `mosaicBinary` | `MOSAIC_WORKBENCH_MOSAIC_BIN` | Search `PATH`, then check `~/.mosaic/bin/mosaic` |
+| `workspaceId` | `MOSAIC_WORKSPACE_ID` | Empty; selected by the user in the UI |
+| `folderId` | `MOSAIC_FOLDER_ID` | `default`, subject to the folders you can actually access |
+| `libraryZip` | `MOSAIC_LIBRARY_ZIP` | The compatible ZIP included in the repository |
+| `assetBaseUrl` | `MOSAIC_ASSET_BASE_URL` | The existing public Library asset directory |
 
-CLI 路径可以是绝对路径或相对此仓库的文件路径；不填写时使用自动发现。环境变量优先于本地 JSON。本地配置修改后重启服务。既有 `CODEX_HOME` 会被尊重，不会修改其他应用的配置。
+CLI paths can be absolute or relative to the repository. Leave them unset to use automatic discovery. Environment variables override the local JSON configuration. Restart the service after changing local settings. An existing `CODEX_HOME` is respected; the workbench does not change other applications' configuration.
 
-本地 Library 图片能显示，不代表 Mosaic 能访问 `localhost`。目标模板默认引用公开 Library 的 HTTPS 资源；团队更换托管位置时，将同一套资源放到目标渲染器可访问的 HTTPS 目录并设置 `assetBaseUrl`。工具会核对资源与来源摘要，不会把整张卡片截图当还原结果。新 ZIP 若改变内部构造器或目录契约，需要更新提取器；它不是任意 Figma/ZIP 导入器。
+Images loading in the local Library does not mean Mosaic can access `localhost`. Generated templates reference the public Library's HTTPS assets by default. To use different hosting, put the same assets in an HTTPS directory accessible to the target renderer and set `assetBaseUrl`. The tool checks assets against source digests and does not use a screenshot of the whole card as the recreated output. If a new ZIP changes the internal constructors or catalog structure, the extractor must be updated. This is not a general-purpose Figma or ZIP importer.
 
-## Skill 与版本
+## Workflow skill and versions
 
-- 随仓库提供完整的 [Mosaic Gen Workflow v3.6](.agents/skills/mosaic-gen-workflow/SKILL.md)。Codex 在本项目可读取它，工作台首次启动会建立独立副本。
-- UI **Skill → Import ZIP → Activate** 可独立更新工作流；运行中任务继续使用启动时冻结的版本。
-- [官方更新入口](https://vibehub.microsoft.com/app/anthonyleung-fp-t-a/)可能需要公司访问权限。
-- 当前直接写入接口只允许所选 Mosaic profile 的实际 SDL pin；项目新建默认 v1.5。下拉菜单会禁用未验证或后台不支持的版本，**不会为了单次任务切换全局 profile**。
-- Skill 的静态样例中若有作者路径或旧接口，以你本机 CLI 路径和实时版本契约为准。
+- The complete [Mosaic Gen Workflow v3.6](.agents/skills/mosaic-gen-workflow/SKILL.md) is included. Codex can read it within this project, and the workbench creates a separate copy on first launch.
+- Use **Skill → Import ZIP → Activate** to update the workflow independently. Running tasks keep the skill snapshot captured when they started.
+- The [official update page](https://vibehub.microsoft.com/app/anthonyleung-fp-t-a/) may require corporate access.
+- The current direct-write interface accepts only the SDL version pinned by the selected Mosaic profile. New work in this project defaults to v1.5. The version menu disables unverified or unsupported versions. **The workbench does not switch your global profile for an individual task.**
+- If static skill examples contain an author's local paths or older interfaces, use your own CLI paths and the current version-specific contract.
 
-## 实际架构与结果边界
+## How it works and what the results mean
 
-每张卡在独立、临时的 Codex App Server 会话中执行；不是把提示转交给 Mosaic autopilot。Codex通过6个受控工具读取来源和skill、查询原生契约、自己编写JSX/schema/data、保存、看截图并记录差异。来源分段读取，不依赖一次性巨型提示。
+Each card runs in a separate, temporary Codex App Server session. Codex performs the authoring itself rather than forwarding the prompt to Mosaic autopilot. Through six controlled tools, it reads the source and skill, inspects native Mosaic contracts, writes JSX, schema, and data, saves the result, reviews screenshots, and records differences. Source material is read in sections rather than passed as one large prompt.
 
-程序限制新模板归属、目的地、时间预算和修复次数。一个请求使用一个工作迭代，修复只上传发生变化的字段；报告更新只写本地文件。执行过程不会自动发布模板，也不会编辑别人的既有模板。
+The execution layer enforces template ownership, output destination, time limits, and repair limits. Each request uses one working iteration; repairs upload only changed fields. Report updates are written locally. The workflow does not automatically publish templates or edit other people's existing templates.
 
-“已保存”“结构校验通过”“已取得截图”“Codex画面判断”“用户验收”分别报告。原生画布、图标、字体、间距、裁切和交互可能与 Library 有差异；未验证的响应式、点击和键盘行为不会记为通过。**464项可选择不代表464项已验收**。图库弹窗等能力尚未形成通用完整映射；复杂卡片可能超时或需要后续修改。
+Reports distinguish **saved output**, **structural validation**, **screenshot capture**, **Codex visual observations**, and **user acceptance**. Native canvas dimensions, icons, fonts, spacing, cropping, and interactions may differ from the Library source. Untested responsive, click, and keyboard behavior is never marked as passed. **Having 464 selectable examples does not mean all 464 have been accepted.** Features such as gallery dialogs do not yet have a complete general mapping; complex cards may time out or need further changes.
 
-本地原型在2026-11-12的两项实测中，3×2单图和5×4三图分别用时4分28秒、4分24秒，均保存为一个迭代并取得实际截图。这是特定环境的历史结果，不是本共享版本在任意账号/网络下的性能或还原保证。共享版本会另外执行离线、干净checkout和连接检查；不会上传作者的历史任务报告。
+In two local prototype runs on November 12, 2026, a 3×2 single-image card and a 5×4 three-image card took 4 minutes 28 seconds and 4 minutes 24 seconds, respectively. Both were saved in one iteration and produced actual screenshots. These are historical results from a specific environment, not guarantees of performance or fidelity for other accounts or networks. Offline, clean-checkout, and live connection checks are separate validation steps. The author's historical run reports are not included in the shared repository.
 
-## 文件与维护
+## Project files and maintenance
 
 ```text
-.agents/skills/mosaic-gen-workflow/   完整工作流skill
-MM_design_library/                  校验过的来源ZIP与摘要
-tools/mosaic-workbench/              本地UI、Codex执行器、受控Mosaic工具
-tools/library-to-mosaic/             ZIP校验与来源提取依赖
-scripts/                            干净环境验收脚本
-outputs/mosaic-workbench/           本机生成结果（忽略）
-tools/mosaic-workbench/state/       本机缓存、skill副本、任务索引（忽略）
+.agents/skills/mosaic-gen-workflow/   Complete workflow skill
+MM_design_library/                  Verified source ZIP and digests
+tools/mosaic-workbench/              Local UI, Codex runner, and controlled Mosaic tools
+tools/library-to-mosaic/             ZIP validation and source extraction dependencies
+scripts/                            Clean-environment verification scripts
+outputs/mosaic-workbench/            Local generated outputs (ignored by Git)
+tools/mosaic-workbench/state/        Local cache, skill copies, and job index (ignored by Git)
 ```
 
-界面和脚本共用执行入口：
+The UI and command-line client use the same execution path:
 
 ```sh
 python3 tools/mosaic-workbench/client.py catalog --search single-image
@@ -135,9 +137,11 @@ python3 tools/mosaic-workbench/client.py run \
   --prefix MM_image_cards --version v1.5
 ```
 
-`--select` 可重复，非默认端口使用 `client.py --url http://127.0.0.1:8771 ...`。`--model`省略时使用自己的环境默认模型。
+Repeat `--select` to choose multiple entries. For a different port, use `client.py --url http://127.0.0.1:8771 ...`. Omitting `--model` uses the default model in your own environment.
 
-升级前等批次结束或主动停止，再 `git pull` 并重启服务。自己的运行数据、登录和 `workbench.local.json` 不进入 Git；不要用清空整个目录的方式升级。
+Before updating, let active batches finish or stop them, then run `git pull` and restart the service. Personal run data, authentication, and `workbench.local.json` are not committed. Keep these local files when updating instead of deleting the entire project directory.
+
+To run the local checks:
 
 ```sh
 python3 -m unittest discover -s tools/mosaic-workbench/tests -v
@@ -145,4 +149,4 @@ python3 -m unittest discover -s tools/library-to-mosaic/tests -v
 python3 scripts/smoke_test.py
 ```
 
-[排查常见问题](docs/troubleshooting.md) · [验证记录](docs/verification.md) · [启用可选CI](docs/ci.md) · [内容来源与声明](THIRD_PARTY_NOTICES.md)
+[Troubleshooting](docs/troubleshooting.md) · [Verification records](docs/verification.md) · [Optional CI](docs/ci.md) · [Sources and notices](THIRD_PARTY_NOTICES.md)

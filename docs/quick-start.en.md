@@ -9,8 +9,8 @@ The workbench UI and new build reports are in English. Source card text, your in
 3. Install Mosaic CLI using the [bundled setup guide](../.agents/skills/mosaic-gen-workflow/references/api-and-iteration-workflow.md). Run `mosaic login` and `mosaic status`. You need your own Mosaic access and may need a corporate network or VPN.
 
 ```sh
-git clone https://github.com/ToddZhaoXY/AIXA-Bing-Design-to-Mosaic-workflow.git
-cd AIXA-Bing-Design-to-Mosaic-workflow
+git clone https://github.com/ToddZhaoXY/Studio-8-AIX-Bing-Design-to-Mosaic-workflow.git
+cd Studio-8-AIX-Bing-Design-to-Mosaic-workflow
 python3 tools/mosaic-workbench/doctor.py
 ./start.sh
 ```
